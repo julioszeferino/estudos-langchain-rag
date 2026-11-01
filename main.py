@@ -1,40 +1,33 @@
-from anthropic import Anthropic
+from langchain_anthropic import ChatAnthropic
 from dotenv import load_dotenv
 import os
 
 load_dotenv()
 api_key = os.getenv("ANTHROPIC_API_KEY")
 
+if api_key is None:
+    raise ValueError("A variável de ambiente ANTHROPIC_API_KEY não está definida.")
+
 numero_dias = 7
 numero_criancas = 2
-atividade = "musica"
+atividade = "praia"
 
 prompt = f"""
-    Crie um roteiro de viagem de {numero_dias} dias, para uma família 
-    com {numero_criancas} crianças, que gosta de {atividade}.
+Crie um roteiro de viagem de {numero_dias} dias para {numero_criancas} crianças, 
+com foco em atividades de {atividade}.
 """
 
-cliente = Anthropic(api_key=api_key)
-
-resposta = cliente.messages.create(
+# Podemos ter vários modelos intanciados
+# inclusive de outros provedores, como OpenAI, Google, etc.
+# o objetivo do langchain é permitir que você troque de 
+# modelo facilmente, sem precisar mudar o código. Permitindo
+# que cada modelo execute a tarefa na qual ele é mais 
+# eficiente.
+modelo_claude = ChatAnthropic(
+    anthropic_api_key=api_key,
     model="claude-haiku-5-5",
-    max_tokens=1000,
-    system="Você e um assistente de roteiro de viagens.",
-    messages=[
-        {
-            "role": "user",
-            "content": prompt
-        }
-    ],
 )
 
-if resposta.stop_reason == "max_tokens":
-    print("Resposta cortada — aumente max_tokens")
+resposta = modelo_claude.invoke(prompt)
 
-for bloco in resposta.content:
-    if bloco.type == "text":
-        print(bloco.text)
-    
-
-
-
+print(resposta.content)
