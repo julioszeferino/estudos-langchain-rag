@@ -6,3 +6,5 @@ langchain-community==0.4.2
 langgraph==1.2.19
 pypdf==6.21.4
 python-dotenv==1.2.4
+blue
+isort
