@@ -46,8 +46,8 @@ def historico_sessao(sessao: str):
 
 
 lista_perguntas = [
-    "Quero visitar um lugar no Brasil, famoso por praias e cultura. \
-    Pode sugerir?",
+    'Quero visitar um lugar no Brasil, famoso por praias e cultura. \
+    Pode sugerir?',
     """Qual a melhor epoca do ano pra ir?""",
 ]
 
