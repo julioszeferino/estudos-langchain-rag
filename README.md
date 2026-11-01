@@ -9,3 +9,6 @@ python -venv venv .venv
 source .venv/bin/activate
 pip install -r requirements.txt
 ```
+
+## Referências
+- [Documentação do Langchain](https://docs.langchain.com/oss/python/langchain/overview)
