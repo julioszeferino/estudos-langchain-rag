@@ -1,4 +1,5 @@
 from langchain_anthropic import ChatAnthropic
+from langchain_core.prompts import PromptTemplate
 from dotenv import load_dotenv
 import os
 
@@ -11,11 +12,24 @@ if api_key is None:
 numero_dias = 7
 numero_criancas = 2
 atividade = "praia"
+modelo_de_prompt = PromptTemplate(
+    template = """
+    Crie um roteiro de viagem de {numero_dias} dias,
+    para {numero_criancas} crianças,
+    com foco em atividades de {atividade}.
+    """
+)
 
-prompt = f"""
-Crie um roteiro de viagem de {numero_dias} dias para {numero_criancas} crianças, 
-com foco em atividades de {atividade}.
-"""
+# prompt = f"""
+# Crie um roteiro de viagem de {numero_dias} dias para {numero_criancas} crianças, 
+# com foco em atividades de {atividade}.
+# """
+
+prompt = modelo_de_prompt.format(
+    numero_dias=numero_dias,
+    numero_criancas=numero_criancas,
+    atividade=atividade
+)
 
 # Podemos ter vários modelos intanciados
 # inclusive de outros provedores, como OpenAI, Google, etc.
