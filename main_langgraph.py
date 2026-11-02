@@ -7,6 +7,7 @@ com ramificações, e paralelismo. Importante em processos
 que sao independentes e que precisam decidir uma rota de
 execução.
 """
+import asyncio
 import os
 from typing import Literal, TypedDict
 
@@ -14,6 +15,8 @@ from dotenv import load_dotenv
 from langchain_anthropic import ChatAnthropic
 from langchain_core.output_parsers import StrOutputParser
 from langchain_core.prompts import ChatPromptTemplate
+from langchain_core.runnables import RunnableConfig
+from langgraph.graph import END, START, StateGraph
 
 load_dotenv()
 
@@ -58,7 +61,7 @@ class Rota(TypedDict):
     destino: Literal['praia', 'montanha']
 
 
-# fazendo a orquestracao das cadeias de forma manual
+# Criando um roteador que toma decisao
 prompt_roteador = ChatPromptTemplate.from_messages(
     [
         ('system', "Responda apenas com 'praia' ou 'montanha'"),
@@ -69,19 +72,72 @@ prompt_roteador = ChatPromptTemplate.from_messages(
 roteador = prompt_roteador | modelo.with_structured_output(Rota)
 
 
-def responder(pergunta: str):
-    rota = roteador.invoke({'query': pergunta})['destino']
-    if rota == 'praia':
-        return cadeia_praia.invoke({'query': pergunta})
-    elif rota == 'montanha':
-        return cadeia_montanha.invoke({'query': pergunta})
-    else:
-        raise ValueError(f'Rota desconhecida: {rota}')
+# Como vamos executar as acoes em paralelo e nao sabemos
+# quanto tempo cada uma vai levar, vamos criar metodos assincronos
+# para cada acao.
+class Estado(TypedDict):
+    query: str
+    destino: Rota
+    resposta: str
 
 
-print(
-    responder(
-        'Quero visitar um lugar no Brasil, famoso por praias e cultura. \
-                Pode sugerir?'
+async def no_roteador(estado: Estado, config: RunnableConfig):
+    """Executa o roteador para decidir qual cadeia executar."""
+    return {
+        'destino': await roteador.ainvoke(
+            {'query': estado['query']}, config=config
+        )
+    }
+
+
+async def no_praia(estado: Estado, config: RunnableConfig):
+    """Executa a cadeia de praia."""
+    return {
+        'resposta': await cadeia_praia.ainvoke(
+            {'query': estado['query']}, config=config
+        )
+    }
+
+
+async def no_montanha(estado: Estado, config: RunnableConfig):
+    """Executa a cadeia de montanha."""
+    return {
+        'resposta': await cadeia_montanha.ainvoke(
+            {'query': estado['query']}, config=config
+        )
+    }
+
+
+def escolher_no(estado: Estado) -> Literal['praia', 'montanha']:
+    """Escolhe qual nó executar com base na decisão do roteador."""
+    return 'praia' if estado['destino']['destino'] == 'praia' else 'montanha'
+
+
+# Monta o grafo de estados para
+# decidir qual cadeia executar.
+grafo = StateGraph(Estado)
+grafo.add_node('rotear', no_roteador)
+grafo.add_node('praia', no_praia)
+grafo.add_node('montanha', no_montanha)
+# Adiciona regra de destino
+grafo.add_edge(START, 'rotear')
+grafo.add_conditional_edges('rotear', escolher_no)
+# Adiciona regras de finalizacao
+grafo.add_edge('praia', END)
+grafo.add_edge('montanha', END)
+
+# Compila o grafo em um Runnable
+app = grafo.compile()
+
+
+async def main():
+    resposta = await app.ainvoke(
+        {
+            'query': 'Quero visitar um lugar no Brasil famoso por praias\
+                  e cultura'
+        }
     )
-)
+    print(resposta['resposta'])
+
+
+asyncio.run(main())
