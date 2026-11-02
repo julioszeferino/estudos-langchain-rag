@@ -8,3 +8,5 @@ pypdf==6.21.4
 python-dotenv==1.2.4
 blue
 isort
+langchain-huggingface==1.2.3
+sentence-transformers==6.2.0
